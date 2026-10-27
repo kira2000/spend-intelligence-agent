@@ -1,0 +1,100 @@
+STAGE 2b - LOCAL LLM SECOND PASS
+============================================================
+Model: qwen2.5:7b   Confidence threshold: 0.7
+Low-confidence test items: 3,660 of 8,000 (45.8%)
+Items in this run: 300
+
+RESULTS ON THE LOW-CONFIDENCE SAMPLE
+------------------------------------------------------------
+Embeddings accuracy on these items:   40.3%
+LLM accuracy on the same items:       44.7%   (+4.3%)
+Ceiling (true class among the 5):     76.0%
+LLM picked right when it could:       58.8%
+Items the LLM fixed / broke:          43 / 30
+Average seconds per item:             1.2  (new calls this run: 0)
+Both methods agree, official code differs: 87 (29.0%)  <- possible coding errors in the source data
+
+WHERE DOES THE LLM HELP? (by embeddings confidence)
+------------------------------------------------------------
+  confidence    items  embeddings     LLM
+  0.0-0.3         70       18.6%   37.1%
+  0.3-0.4         56       32.1%   42.9%
+  0.4-0.5         61       34.4%   39.3%
+  0.5-0.6         60       55.0%   45.0%
+  0.6-0.7         53       67.9%   62.3%
+
+WHICH RULE IS BEST? (use the LLM only below a cut-off, embeddings otherwise)
+------------------------------------------------------------
+  LLM below 0.3:  8.7% of items to LLM -> projected accuracy 72.3%  (sample size 70)
+  LLM below 0.4: 17.6% of items to LLM -> projected accuracy 73.4%  (sample size 126)
+  LLM below 0.5: 27.5% of items to LLM -> projected accuracy 73.9%  (sample size 187)
+  LLM below 0.6: 37.5% of items to LLM -> projected accuracy 73.1%  (sample size 247)
+  LLM below 0.7: 45.8% of items to LLM -> projected accuracy 72.7%  (sample size 300)
+  Embeddings only:                               projected accuracy 70.7%
+  Best rule: use the LLM below confidence 0.5 (73.9%)
+
+PROJECTED FULL PIPELINE (embeddings when confident, LLM otherwise)
+------------------------------------------------------------
+Embeddings only:                      70.7%
+Hybrid (embeddings + LLM):            72.7%
+Time to run the LLM on all 3,660 low-confidence items: about 1.3 hours
+
+Examples the LLM FIXED:
+  text:   6BLCH PURE BRIGHT ULTRA BLEACH 6/96 6/96 OZ
+  true 505 (LAUNDRY AND DRY CLEANING COMPOUNDS AND SUPPLI) | embeddings 885 | LLM 505
+  reason: Past purchase match and higher similarity
+  text:   48 each FC42-MS41 LAMP - CFL, 23W, T2, SCREW-IN, SPIRAL, Medium = | Service Lighting & Ele
+  true 285 (ELECTRICAL EQUIPMENT AND SUPPLIES (EXCEPT CAB) | embeddings 035 | LLM 285
+  reason: Past purchases indicate electrical lighting components.
+  text:   PVC Conduit & Fittings, Glue | PVC & Fittings, Walnut, Thompson
+  true 285 (ELECTRICAL EQUIPMENT AND SUPPLIES (EXCEPT CAB) | embeddings 020 | LLM 285
+  reason: PVC conduit and fittings match electrical supplies better.
+  text:   Gearbox Speed Reducer GRG-H-821-7.5-H1-23 | Gearbox Speed Reducer MAX
+  true 285 (ELECTRICAL EQUIPMENT AND SUPPLIES (EXCEPT CAB) | embeddings 100 | LLM 285
+  reason: Gearbox and reducer match better with electrical equipment.
+  text:   50N [E] Gasket | Striper Repair Parts
+  true 545 (Impact Tools, Air Powered (Not Road Building)) | embeddings 365 | LLM 545
+  reason: Matches '50N [E] Piston, Air' and 'Striper Repair Parts'
+  text:   18891-CPSMM-120 - SINGLE SLOT PRIMARY MANAGEMENT MODULE FOR POINT SYSTEM CHASSIS | 18891-G
+  true 204 (COMPUTER HARDWARE AND PERIPHERALS FOR MICROCO) | embeddings 206 | LLM 204
+  reason: Network hardware module fits best.
+
+Examples the LLM got WRONG:
+  text:   Items as specified in RFQ GAL0432. Deliveries - Attn: Sean Wilson | Communications Equipme
+  true 204 (COMPUTER HARDWARE AND PERIPHERALS FOR MICROCO) | embeddings 570 | LLM 290
+  reason: Solar equipment for Webberville Solar Plant
+  text:   RCT 013a PROPAC UNISEX ALL-INCLUSIVE HYGIENE KIT, 270 | UASI24 - Hygiene & Auto Safety Kit
+  true 545 (Impact Tools, Air Powered (Not Road Building)) | embeddings 465 | LLM 270
+  reason: Hygiene kit fits Vaccines best.
+  text:   Evaluation for Repair | SV-CTECC Audio in Conference Room Repair
+  true 655 (PHOTO EQUIP - FILM AND SUPPLIES; Video Equipm) | embeddings 655 | LLM 880
+  reason: Clear fit for audio equipment repair
+  text:   Sony NP-F970 L-Series Info Litiium Battery Pack | ChannelAustin-Camera package, Video Euqp
+  true 287 (ELECTRONIC EQUIP, PARTS, AND ACCY; Wire and C) | embeddings 655 | LLM 840
+  reason: Sony battery fits video equipment best.
+  text:   New chevron developed | AFD patch and APD sgt. chevron OD green
+  true 200 (CLOTHING: ATHLETIC / CASUAL / DRESS / UNIFORM) | embeddings 201 | LLM 201
+  reason: Chevrons and patches fit best with clothing accessories.
+  text:   PARD 7840 HGAC BT01-14 | HGAC National Bus Sales 18-22 passenger bus
+  true 007 (UTILITY VEHICLE, PASSENGER, 2-; TRUCKSTER, 4 ) | embeddings 070 | LLM 070
+  reason: Past purchases match more closely.
+
+Possible coding errors (both methods agree, official code differs):
+  text:   New chevron developed | AFD patch and APD sgt. chevron OD green
+  true 200 (CLOTHING: ATHLETIC / CASUAL / DRESS / UNIFORM) | embeddings 201 | LLM 201
+  reason: Chevrons and patches fit best with clothing accessories.
+  text:   PARD 7840 HGAC BT01-14 | HGAC National Bus Sales 18-22 passenger bus
+  true 007 (UTILITY VEHICLE, PASSENGER, 2-; TRUCKSTER, 4 ) | embeddings 070 | LLM 070
+  reason: Past purchases match more closely.
+  text:   AE 1003 BuyBoard 516-16 | Fiscal Year (FY18) MAGNUM TRAILERS
+  true 895 (WELDING EQUIPMENT AND SUPPLIES; GOGGLES MONO ) | embeddings 070 | LLM 070
+  reason: Clear fit with past trailer purchases
+  text:   15 boxes | 8.4% Sodium Bicarbonate 50mEq Luer lock
+  true 475 (HOSPITAL, SURGICAL, AND RELATED MEDICAL ACCES) | embeddings 269 | LLM 269
+  reason: Clear fit with past purchases of sodium bicarbonate
+  text:   FREIGHT PLEASE | GRAINGER - WAREHOUSE STOCK, STRUT
+  true 545 (Impact Tools, Air Powered (Not Road Building)) | embeddings 120 | LLM 120
+  reason: Freight for warehouse stock matches past purchases.
+  text:   Austin Materials Exchange Program - milestone 3.4 / 3rd year Milestones | FY17 - Austin Ma
+  true 208 (COMPUTER SOFTWARE FOR MICROCOMPUTERS (PREPROG) | embeddings 560 | LLM 560
+  reason: Similar past purchases match better.
