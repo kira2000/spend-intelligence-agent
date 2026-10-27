@@ -1,30 +1,30 @@
 STAGE 2a - EMBEDDINGS + NEAREST NEIGHBOURS
 ============================================================
 Usable lines: 265,990  ->  unique texts: 173,903
-Train texts: 2,000 covering 170 classes
-Test texts:  500 covering 99 classes (4 test texts have a class never seen in train)
+Train texts: 60,000 covering 216 classes
+Test texts:  8,000 covering 183 classes (0 test texts have a class never seen in train)
 
-Embedding 2,000 new texts (0 already cached)...
-Embedding took 2.3 minutes
-Embedding 500 new texts (2,000 already cached)...
-Embedding took 0.1 minutes
+Embedding 58,544 new texts (2,500 already cached)...
+Embedding took 16.9 minutes
+Embedding 7,299 new texts (61,044 already cached)...
+Embedding took 2.2 minutes
 
 RESULTS ON HELD-OUT TEST TEXTS (labels hidden during prediction)
 ------------------------------------------------------------
-Top-1 accuracy (exact class):         44.0%
-Top-5 recall (true class in top 5):   74.0%   <- ceiling for the LLM pass
-Accuracy weighted by purchase lines:  44.3%
+Top-1 accuracy (exact class):         70.7%
+Top-5 recall (true class in top 5):   89.5%   <- ceiling for the LLM pass
+Accuracy weighted by purchase lines:  71.2%
 
 Accuracy by confidence (how much we can trust each prediction):
   confidence    share of test    accuracy
-  0.9-1.0           5.8%       89.7%
-  0.7-0.9          11.4%       84.2%
-  0.5-0.7          13.2%       66.7%
-  0.0-0.5          69.6%       29.3%
+  0.9-1.0          38.4%       96.8%
+  0.7-0.9          15.9%       81.2%
+  0.5-0.7          18.3%       59.6%
+  0.0-0.5          27.5%       35.5%
 
 If low-confidence items go to the LLM:
-  threshold 0.5: 30.4% auto-categorized at 77.6% accuracy; 348 items (69.6%) sent to the LLM
-  threshold 0.6: 24.0% auto-categorized at 80.0% accuracy; 380 items (76.0%) sent to the LLM
-  threshold 0.7: 17.2% auto-categorized at 86.0% accuracy; 414 items (82.8%) sent to the LLM
+  threshold 0.5: 72.5% auto-categorized at 84.0% accuracy; 2,196 items (27.5%) sent to the LLM
+  threshold 0.6: 62.5% auto-categorized at 88.9% accuracy; 3,002 items (37.5%) sent to the LLM
+  threshold 0.7: 54.2% auto-categorized at 92.3% accuracy; 3,660 items (45.8%) sent to the LLM
 
-Total time: 2.5 minutes
+Total time: 19.3 minutes
