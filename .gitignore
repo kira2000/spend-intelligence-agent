@@ -1,0 +1,15 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.pyc
+
+# Data and databases (too large for GitHub; download instructions are in README)
+data/
+*.duckdb
+*.duckdb.wal
+
+# Secrets
+.env
+
+# Editor
+.vscode/

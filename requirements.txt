@@ -1,0 +1,6 @@
+duckdb
+pandas
+rapidfuzz
+ollama
+streamlit
+python-dotenv

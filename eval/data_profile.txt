@@ -1,0 +1,148 @@
+
+======================================================================
+1. SIZE AND TIME RANGE
+======================================================================
+ line_items  purchase_orders first_award last_award  total_spend_millions
+     321625           168133  2009-10-01 2026-09-30                4070.9
+
+Line items and spend by year:
+ year  line_items  spend_millions
+ 2009        7204            29.4
+ 2010       31273           134.1
+ 2011       28396           184.7
+ 2012       25848           189.3
+ 2013       24830           166.3
+ 2014       23970           198.2
+ 2015       21313           194.5
+ 2016       20617           193.7
+ 2017       19007           173.8
+ 2018       19319           233.3
+ 2019       18504           258.5
+ 2020       14579           257.9
+ 2021       11752           329.3
+ 2022       10608           271.1
+ 2023       10996           326.8
+ 2024       11689           323.9
+ 2025       11528           377.3
+ 2026       10192           228.6
+
+======================================================================
+2. COMMODITY CODES (our answer key for categorization)
+======================================================================
+ code_length  line_items
+           3        3224
+           5      167104
+           7       71757
+          11       79540
+
+Distinct NIGP classes (3-digit): 219
+Distinct class-items (5-digit):  3,187
+Distinct full codes:            11,090
+
+Top 15 classes by spend:
+nigp_class                                         example_description  line_items  spend_millions
+       070                                Trucks, Cab and Chassis Only        4217          627.79
+       285           Street Lighting Luminaires, Accessories and Parts       18474          521.68
+       405                                    DIESEL FUEL (MOTOR FUEL)        5921          242.17
+       204          Peripherals, Miscellaneous: Joy Sticks, Graphic Di       16208          221.79
+       208                     Shipping and Postal Management Software        5177          157.14
+       725              Two-Way Radio Supplies, Parts, and Accessories       10068          152.37
+       885                                      FERRIC SULFATE (FESO4)        4544          143.46
+       890                       REDUCER CI MECH JT & MECH JT 8 X 6 IN       11786          136.01
+       745          ASPHALTIC CONCRETE, HOT MIX, IN ACCORDANCE WITH IT        8438          120.43
+       545               Impact Tools, Air Powered (Not Road Building)        7166          117.93
+       206 DIGITAL PROCESS CONTROL SYSTEMS, (UPS), INCLUDING PARTS AND        1652          112.19
+       060                                   SPECIAL SUPPORT EQUIPMENT        5240           85.21
+       550                            CONTROLLER PARTS, TRAFFIC SIGNAL        4195           74.35
+       200               COVERALL DISPOSABLE LT. FABRIC LARGE W/COLLAR       20365           70.85
+       655                     PARTS AND ACCESSORIES, CAMERAS, DIGITAL        1252           65.34
+
+======================================================================
+3. LABEL LEAKAGE CHECK
+======================================================================
+If every code always has the same description, the description is just the
+code's official label, and using it to predict the code would be cheating.
+descriptions_per_code  codes
+     2-5 descriptions    436
+exactly 1 description  10654
+
+======================================================================
+4. DESCRIPTION QUALITY
+======================================================================
+Missing commodity description                                    0  (0.0%)
+Missing extended description                                66,182  (20.6%)
+Extended description is form junk (RC LN / QTY DEL)         57,124  (17.8%)
+Commodity description under 10 characters                    2,946  (0.9%)
+
+======================================================================
+5. QUANTITY, UNITS AND PRICES (needed for price comparison)
+======================================================================
+Quantity is 0 or missing (lump-sum lines)                       109,362  (34.0%)
+Unit price is 0 or missing                                      109,362  (34.0%)
+Unit of measure missing                                         109,362  (34.0%)
+Usable for price comparison (qty>0, price>0, unit known)        212,263  (66.0%)
+Total does not match qty x price (off by > $1)                        0  (0.0%)
+Negative line total (credits / corrections)                           0  (0.0%)
+
+Most common units of measure:
+ uom    meaning  line_items
+  EA       Each      165097
+ NaN        NaN      109362
+ TON        Ton        8018
+  PR       Pair        7145
+CASE       Case        5697
+  PK       Pack        4742
+ BOX        Box        4173
+ GAL     Gallon        2534
+CUYD Cubic Yard        2532
+  FT       Foot        1631
+ DOL     Dollar        1312
+ PKG    Package        1015
+  LB      Pound         926
+  RL       Roll         888
+ LOT        Lot         630
+
+======================================================================
+6. VENDORS (what the de-duplication step will need to fix)
+======================================================================
+Distinct vendor codes: 5,772
+Distinct vendor names: 6,259
+Names used by more than one vendor code: 24
+
+Examples - same name, several vendor codes:
+                             vendor_name  vendor_codes  line_items
+                               GALLS LLC             2        1133
+          LOWER COLORADO RIVER AUTHORITY             2         490
+                            SAFEWARE INC             2         212
+                        ACUSHNET COMPANY             2         206
+                Shrieve Chemical Company             2          85
+      UNITED RENTALS (NORTH AMERICA) INC             2          84
+                             COMPU SIGNS             2          80
+               CMC STEEL FABRICATORS INC             2          78
+                   QUALITROL COMPANY LLC             2          63
+CONSOLIDATED ELECTRICAL DISTRIBUTORS INC             2          61
+
+Top 15 vendors by spend:
+                         vendor_name vendor_state  line_items  spend_millions
+         TEXAS ELECTRIC COOPERATIVES           TX        1771          152.72
+                    SILSBEE FORD INC           TX        1073          138.02
+             SUN COAST RESOURCES INC           TX        2159          129.16
+              MOTOROLA SOLUTIONS INC           TX        2708          105.78
+                        TECHLINE INC           TX        4200           98.41
+     Pinnacle Petroleum Incorporated           CA        1470           95.07
+                   DELL MARKETING LP           TX       11498           90.95
+                    W W GRAINGER INC           TX       26054           90.54
+ Siddons-Martin Emergency Group, LLC           TX         125           88.77
+     KBS ELECTRICAL DISTRIBUTORS INC           TX        1885           63.83
+METRO FIRE APPARATUS SPECIALISTS INC           TX         487           56.25
+         Meter Readings Holding, LLC           MO           2           51.06
+                             CDW LLC           IL        2575           50.71
+      RUSH TRUCK CENTERS OF TEXAS LP           TX         188           47.72
+   LONGHORN INTERNATIONAL TRUCKS LTD           TX         306           41.82
+
+======================================================================
+7. CONTRACT COVERAGE
+======================================================================
+                  bought  line_items  spend_millions
+Under a master agreement      240651          3522.3
+     No master agreement       80974           548.7
