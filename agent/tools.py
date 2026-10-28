@@ -5,6 +5,7 @@ Every tool returns a short JSON string (max 50 rows) so a small local model can 
 Nothing here can change the database: run_sql only accepts a single SELECT statement.
 """
 from pathlib import Path
+import re
 
 import duckdb
 
@@ -47,6 +48,29 @@ class_names AS (
 )"""
 
 
+# Search by words, not exact phrases: "Motorola Inc." must also find "MOTOROLA SOLUTIONS INC"
+STOP_WORDS = {"inc", "llc", "llp", "ltd", "lp", "corp", "corporation", "co", "company", "incorporated",
+              "the", "of", "and", "for", "a", "an", "plc"}
+
+
+def _words(text: str) -> list[str]:
+    words = []
+    for w in re.findall(r"[a-z0-9]+", str(text).lower()):
+        if w in STOP_WORDS or len(w) < 2:
+            continue
+        words.append(w[:-1] if len(w) > 4 and w.endswith("s") and not w.endswith("ss") else w)  # vests -> vest
+    return words or [str(text).lower().strip()]
+
+
+def _match_all_words(columns: list[str], text: str):
+    """SQL condition: every word appears in at least one of the columns."""
+    conds, params = [], []
+    for w in _words(text):
+        conds.append("(" + " OR ".join(f"{c} ILIKE ?" for c in columns) + ")")
+        params += [f"%{w}%"] * len(columns)
+    return " AND ".join(conds), params
+
+
 def _json(df) -> str:
     if len(df) == 0:
         return "[]  (no rows matched)"
@@ -82,11 +106,10 @@ class SpendTools:
 
     def search_categories(self, text: str) -> str:
         """Find spend categories whose name or items match the text (last 3 years)."""
-        like = f"%{text}%"
-        return _json(self._df("""
+        cond, params = _match_all_words(["commodity_desc", "extended_desc"], text)
+        return _json(self._df(f"""
             WITH hits AS (
-                SELECT DISTINCT nigp_class FROM po
-                WHERE commodity_desc ILIKE ? OR extended_desc ILIKE ?
+                SELECT DISTINCT nigp_class FROM po WHERE {cond}
             )
             SELECT r.nigp_class, c.class_name,
                    round(sum(r.line_total)) AS spend_3y,
@@ -94,7 +117,7 @@ class SpendTools:
                    count(*) AS lines
             FROM recent_po r JOIN hits USING (nigp_class) LEFT JOIN class_names c USING (nigp_class)
             GROUP BY 1, 2 ORDER BY spend_3y DESC LIMIT 10
-        """, [like, like]))
+        """, params))
 
     def category_details(self, nigp_class: str) -> str:
         """Spend, top vendors, contract coverage and savings for one category (3-digit NIGP class)."""
@@ -123,13 +146,14 @@ class SpendTools:
 
     def price_variance(self, item_text: str) -> str:
         """Price spread and potential savings for items whose name matches the text."""
-        return _json(self._df("""
+        cond, params = _match_all_words(["item"], item_text)
+        return _json(self._df(f"""
             SELECT item, uom, nigp_class, purchases, vendors, min_price, p25_price, median_price,
                    max_price, round(spend) AS spend, round(potential_savings) AS potential_savings,
                    lowest_price_vendor, is_capital
-            FROM savings_price_variance WHERE item ILIKE ?
+            FROM savings_price_variance WHERE {cond}
             ORDER BY is_capital, potential_savings DESC LIMIT 10
-        """, [f"%{item_text}%"]))
+        """, params))
 
     def top_savings(self, kind: str = "all", limit: int = 10) -> str:
         """Biggest savings opportunities. kind = price_variance | fragmentation | off_contract | all."""
@@ -151,25 +175,67 @@ class SpendTools:
         return f'{{"opportunities": {_json(df)}, "total_potential_savings_of_these": {total}}}'
 
     def vendor_lookup(self, name: str) -> str:
-        """Find a vendor (including merged duplicate names) and its spend and main categories."""
-        return _json(self._df("""
+        """Find vendors by name (word match, merged duplicates included), their spend, and the
+        price variance on items they supplied in the last 3 years."""
+        cond, params = _match_all_words(["vendor_name", "canonical_name"], name)
+        vendors = self._df(f"""
             WITH v AS (
                 SELECT vendor_id, any_value(canonical_name) AS vendor,
                        string_agg(DISTINCT vendor_name, ' | ') AS names_merged
                 FROM vendor_map
-                WHERE vendor_id IN (SELECT vendor_id FROM vendor_map
-                                    WHERE vendor_name ILIKE ? OR canonical_name ILIKE ?)
+                WHERE vendor_id IN (SELECT vendor_id FROM vendor_map WHERE {cond})
                 GROUP BY 1
             )
-            SELECT v.vendor, v.names_merged,
+            SELECT v.vendor_id, v.vendor, v.names_merged,
                    round(sum(p.line_total)) AS spend_all_years,
                    count(*) AS lines,
                    min(p.award_date) AS first_purchase, max(p.award_date) AS last_purchase,
                    string_agg(DISTINCT p.nigp_class, ', ') AS categories
             FROM v JOIN vendor_map m USING (vendor_id)
             JOIN po p ON p.vendor_code = m.vendor_code AND p.vendor_name = m.vendor_name
-            GROUP BY v.vendor, v.names_merged ORDER BY spend_all_years DESC LIMIT 5
-        """, [f"%{name}%", f"%{name}%"]))
+            GROUP BY v.vendor_id, v.vendor, v.names_merged ORDER BY spend_all_years DESC LIMIT 5
+        """, params)
+        if not len(vendors):
+            return '{"vendors": [], "note": "no vendor matched these words"}'
+        ids = ",".join(str(int(i)) for i in vendors["vendor_id"])
+        above = self._df(f"""
+            SELECT s.item, l.uom, any_value(l.vendor) AS vendor, count(*) AS purchases,
+                   any_value(s.vendors) AS vendors_selling_this_item,
+                   round(min(l.unit_price), 2) AS vendor_min_price,
+                   round(median(l.unit_price), 2) AS vendor_median_price,
+                   round(max(l.unit_price), 2) AS vendor_max_price,
+                   any_value(s.median_price) AS all_vendors_median_price,
+                   any_value(s.p25_price) AS p25_price,
+                   round(sum(greatest(l.unit_price - s.p25_price, 0) * l.quantity)) AS potential_savings
+            FROM recent_po l JOIN savings_price_variance s USING (commodity_code, uom)
+            WHERE l.vendor_id IN ({ids}) AND NOT s.is_capital
+              AND l.quantity > 0 AND l.unit_price > 0 AND l.unit_price <= 5 * s.median_price
+            GROUP BY s.item, l.uom
+            HAVING sum(greatest(l.unit_price - s.p25_price, 0) * l.quantity) > 0
+            ORDER BY potential_savings DESC LIMIT 10
+        """)
+        total = round(float(above["potential_savings"].sum())) if len(above) else 0
+        return (f'{{"vendors": {_json(vendors.drop(columns="vendor_id"))}, '
+                f'"price_variance_items_last_3y": {_json(above)}, '
+                f'"note": "potential_savings = cost of this vendor\'s purchases above the item\'s '
+                f'25th-percentile price; the spread can be within this vendor\'s own purchases", '
+                f'"total_potential_savings_of_these": {total}}}')
+
+    def spend_by_year(self, category_text: str = "") -> str:
+        """Actual spend per year (all years), overall or for categories matching the words.
+        Historical only - the data has no forecasts."""
+        if category_text and category_text.strip():
+            cond, params = _match_all_words(["commodity_desc", "extended_desc"], category_text)
+            where = f"WHERE nigp_class IN (SELECT DISTINCT nigp_class FROM po WHERE {cond})"
+        else:
+            where, params = "", []
+        df = self._df(f"""
+            SELECT year(award_date) AS year, round(sum(line_total)) AS spend,
+                   count(*) AS lines, count(DISTINCT purchase_order) AS purchase_orders
+            FROM po {where} GROUP BY 1 ORDER BY 1
+        """, params)
+        return (f'{{"spend_by_year": {_json(df)}, "note": "calendar years by award date; '
+                f'the last year may be partial (data ends {self._df("SELECT max(award_date) AS d FROM po")["d"][0]})"}}')
 
     # ------------------------------------------------------------ registry
     def functions(self) -> dict:
@@ -180,6 +246,7 @@ class SpendTools:
             "price_variance": self.price_variance,
             "top_savings": self.top_savings,
             "vendor_lookup": self.vendor_lookup,
+            "spend_by_year": self.spend_by_year,
         }
 
 
@@ -199,8 +266,12 @@ TOOL_SPECS = [
           {"nigp_class": {"type": "string", "description": "3-digit code, e.g. '345'"}}, ["nigp_class"]),
     _spec("price_variance", "Price spread and potential savings for items whose name contains the text.",
           {"item_text": {"type": "string"}}, ["item_text"]),
-    _spec("vendor_lookup", "Look up a vendor by name, including merged duplicate names.",
+    _spec("vendor_lookup", "Look up vendors by name (partial words are fine, e.g. 'motorola'), with spend "
+                           "and price variance on items the vendor supplied (last 3 years).",
           {"name": {"type": "string"}}, ["name"]),
+    _spec("spend_by_year", "Actual spend per year (history, all years), overall or for a category word "
+                           "such as 'fuel'. Use for trend or 'next year' questions; there are no forecasts.",
+          {"category_text": {"type": "string", "description": "optional, e.g. 'fuel'; empty = all spend"}}, []),
     _spec("run_sql", "Run one read-only DuckDB SELECT query when the other tools are not enough."
                      + SCHEMA_HELP, {"query": {"type": "string"}}, ["query"]),
 ]

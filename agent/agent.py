@@ -16,6 +16,9 @@ from tools import SpendTools, TOOL_SPECS, DB_PATH  # noqa: E402
 
 MODEL = "qwen2.5:7b"
 MAX_STEPS = 6
+NUMBER_CHECK = "number_check"   # pseudo-step shown in the trace; never counts as evidence
+_TEXT_TOOL_CALL = re.compile(r"\[?\b(run_sql|search_categories|category_details|price_variance|top_savings|"
+                             r"vendor_lookup|spend_by_year)\s*\([^)]*\)\]?")
 
 SYSTEM = """You are a procurement spend analyst for the City of Austin.
 Data: city purchase orders Oct 2009 - Sep 2026 (321,625 lines). Savings tables cover the last 3 years.
@@ -30,12 +33,26 @@ Rules:
 - Call all savings "potential savings"; they still need validation by the procurement team.
 - Answer in under 200 words: a one-line answer first, then 3-6 bullets with $ figures,
   then one recommended next step.
+- If a tool finds nothing for part of the question, say so in one line and still report what
+  the tools DID return (e.g. total spend). Never write empty bullets.
+- The data has NO forecasts, budgets, delivery dates, quality ratings or vendor profits.
+  If asked about those, say the data cannot answer it. For "next year" or trend questions,
+  call spend_by_year and describe the actual history instead of predicting.
+- Never write a tool call as text in your answer; call the tool.
 - If the data cannot answer the question, say so plainly."""
 
 
 def _chat(**kwargs):
     import ollama
     return ollama.chat(**kwargs)
+
+
+_EMPTY_BULLET = re.compile(r"^\s*([-*\u2022]|\d+\.)\s*$")
+
+
+def _clean(text: str) -> str:
+    """Remove empty bullet lines a small model sometimes produces."""
+    return "\n".join(l for l in (text or "").splitlines() if not _EMPTY_BULLET.match(l)).strip()
 
 
 def _msg(resp):
@@ -54,13 +71,43 @@ def run_agent(question: str, tools: SpendTools, history: list | None = None,
 
     functions = tools.functions()
     steps = []
+    retried = False
     for _ in range(MAX_STEPS):
         resp = chat_fn(model=model, messages=messages, tools=TOOL_SPECS, options={"temperature": 0})
         msg = _msg(resp)
         calls = (msg.get("tool_calls") if isinstance(msg, dict) else msg.tool_calls) or []
         if not calls:
             content = msg.get("content") if isinstance(msg, dict) else msg.content
-            return {"answer": content or "(no answer)", "steps": steps, "seconds": time.time() - start}
+            answer = _clean(content) or "(no answer)"
+            bad = check_numbers(answer, steps)["unverified"]
+            text_calls = [m.group(0) for m in _TEXT_TOOL_CALL.finditer(answer)]
+            if text_calls and not retried:
+                retried = True
+                steps.append({"tool": NUMBER_CHECK, "args": {}, "seconds": 0,
+                              "result": "The answer contained tool calls written as text. Asked the model to call them."})
+                messages.append({"role": "assistant", "content": content})
+                messages.append({"role": "user", "content":
+                                 "You wrote tool calls as text in your answer. Do not do that: actually call "
+                                 "the tools, then answer with the numbers they return."})
+                continue
+            for call_text in text_calls:          # still there after the retry: remove them
+                answer = answer.replace(call_text, "[not available]")
+            if bad and not retried:
+                # Self-correction: give the model one chance to fetch the real figure or drop it
+                retried = True
+                steps.append({"tool": NUMBER_CHECK, "args": {}, "seconds": 0,
+                              "result": f"Figures not returned by any tool: {', '.join(bad)}. Asked the model to fix them."})
+                messages.append({"role": "assistant", "content": content})
+                messages.append({"role": "user", "content":
+                                 f"Your answer contains figures that no tool returned: {', '.join(bad)}. "
+                                 "Call a tool to get the real figure, or rewrite the answer without it."})
+                continue
+            if bad:
+                for figure in bad:     # last resort: remove what still cannot be verified
+                    answer = answer.replace(figure, "[figure removed: not found in the data]")
+                steps.append({"tool": NUMBER_CHECK, "args": {}, "seconds": 0,
+                              "result": f"Removed unverified figures: {', '.join(bad)}"})
+            return {"answer": answer, "steps": steps, "seconds": time.time() - start}
         messages.append(msg)
         for call in calls:
             fn = call["function"] if isinstance(call, dict) else call.function
@@ -87,12 +134,14 @@ def run_agent(question: str, tools: SpendTools, history: list | None = None,
     messages.append({"role": "user", "content": "Answer now using only the tool results above."})
     msg = _msg(chat_fn(model=model, messages=messages, options={"temperature": 0}))
     content = msg.get("content") if isinstance(msg, dict) else msg.content
-    return {"answer": content, "steps": steps, "seconds": time.time() - start}
+    return {"answer": _clean(content), "steps": steps, "seconds": time.time() - start}
 
 
 MEMO_PROMPT = """Write a short savings memo (under 300 words) to the City of Austin Procurement Director.
 Use ONLY the facts and numbers in the analysis below. Copy numbers exactly.
 Do NOT add up, round or calculate any number. If a total appears in the tool results you may use it.
+Never use placeholder or example numbers. If the analysis has no numbers, write the memo without numbers
+and say the data could not answer the question.
 
 Format:
 Subject: ...
@@ -120,7 +169,8 @@ def check_numbers(text: str, steps: list) -> dict:
     "$3,813,259" must match a tool number within $1; "$3.8M" must match within half
     of its last digit (so $3.8M matches 3,813,259). Returns verified and unverified figures.
     """
-    evidence = [float(n) for s in steps for n in _NUM.findall(s["result"].replace(",", ""))]
+    evidence = [float(n) for s in steps if s["tool"] != NUMBER_CHECK
+                for n in _NUM.findall(s["result"].replace(",", ""))]
     verified, unverified = [], []
     for m in _MONEY.finditer(text):
         raw, suffix = m.group(1).replace(",", ""), (m.group(2) or "").lower()
@@ -137,11 +187,12 @@ def check_numbers(text: str, steps: list) -> dict:
 
 
 def draft_memo(question: str, result: dict, model: str = MODEL, chat_fn=_chat) -> str:
-    evidence = "\n".join(f"- {s['tool']}({s['args']}): {s['result'][:1200]}" for s in result["steps"])
+    evidence = "\n".join(f"- {s['tool']}({s['args']}): {s['result'][:1200]}"
+                         for s in result["steps"] if s["tool"] != NUMBER_CHECK)
     prompt = MEMO_PROMPT.format(question=question, answer=result["answer"], evidence=evidence or "(none)")
     msg = _msg(chat_fn(model=model, messages=[{"role": "user", "content": prompt}],
                        options={"temperature": 0.2}))
-    return msg.get("content") if isinstance(msg, dict) else msg.content
+    return _clean(msg.get("content") if isinstance(msg, dict) else msg.content)
 
 
 if __name__ == "__main__":
