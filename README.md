@@ -4,7 +4,9 @@ An AI agent that cleans, categorizes, and finds savings in messy procurement dat
 
 Built on real public data: **City of Austin purchase orders, Oct 2009 – Sep 2026 (321,625 line items, $4.07B in spend).**
 
-> Work in progress. Results below are updated as each stage is finished.
+### ▶ [Try the live demo](https://spend-intelligence-agent.streamlit.app)
+The online demo shows the real results. The agent itself runs locally with Ollama, so the
+*Ask the agent* tab online replays real recorded conversations (tool calls, number checks and memos included).
 
 ## The problem
 Large organizations have hundreds of thousands of purchase lines with inconsistent vendor names and free-text descriptions. That makes basic questions such as "how much do we spend on safety gear, and with how many suppliers?" hard to answer. Companies pay spend-analytics vendors to fix this.
@@ -37,6 +39,9 @@ Large organizations have hundreds of thousands of purchase lines with inconsiste
 - **The LLM only helps where the embeddings are unsure.** Below confidence 0.5 it clearly helps; between 0.5 and 0.7 it hurts, so the pipeline uses it only below 0.5.
 - **Sanity-checking savings:** the first price-variance estimate was $60M, but it was driven by vehicles where one code covers a $62K pickup and a $770K specialty truck. Separating capital items (median > $10K) and non-comparable units (monthly bills, lots, hours) gave a defensible **$7.1M**; capital items are reported separately with the advice to standardize specs before comparing bids.
 - **LLMs are bad at arithmetic:** the first drafted memo stated a total of $10,811,794; the real sum was $10,891,694. Fix: totals are computed in code by the tool, the model is told never to calculate, and an automatic number check flags any $ figure not found in the tool results before the memo can be approved.
+- **Search recall:** asking about "Motorola Inc." first found only a small 2010 account and missed MOTOROLA SOLUTIONS INC ($105.8M), because the search matched the exact phrase. Search now matches words (legal endings like Inc/LLC ignored), and vendor lookups include the vendor's own price variance.
+- **Invented numbers:** asked "What will we spend next year?", the model invented $1,234,567,890. Guardrails now work in four layers: the prompt lists what the data cannot answer and adds a `spend_by_year` tool for honest trend answers; every $ figure is checked against tool results; the agent gets one chance to self-correct, otherwise the figure is removed; and memo approval is blocked while any figure is unverified.
+- **Tool calls written as text:** the small model sometimes wrote `run_sql(...)` into its answer instead of calling the tool. This is detected, the model is asked to call the tool, and any remaining text calls are removed.
 - **Safety by design:** the agent's SQL tool accepts only a single SELECT statement (writes and multi-statement queries are rejected), and memos need explicit human approval.
 - Caveat: the hybrid figure is measured on a 300-item sample (about 60 items per confidence band), so it carries a few points of uncertainty.
 
@@ -65,6 +70,7 @@ python pipeline/categorize_embed.py      # ~20 min the first time (embeddings ar
 python pipeline/categorize_llm.py        # 300-item LLM evaluation, ~6 min
 python pipeline/find_savings.py          # seconds; writes eval/top_savings_opportunities.csv
 streamlit run app/app.py                 # the app (stop it before re-running pipeline scripts)
+python app/export_demo.py                # refresh demo_data/ for the online demo (records agent conversations)
 ```
 
 ## Tech
