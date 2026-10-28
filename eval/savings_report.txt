@@ -1,0 +1,83 @@
+STAGE 3 - SAVINGS OPPORTUNITIES
+======================================================================
+Window: 2023-09-30 to 2026-09-30  (3 years)
+Purchase lines: 36,314   Spend: $1,047.4M
+All savings are POTENTIAL and need validation by a procurement team.
+
+1. PRICE VARIANCE (same item + unit, different prices)
+----------------------------------------------------------------------
+Comparable items with 5+ priced purchases: 133   bought from 2+ vendors: 53
+Spend on these items: $30.7M
+Potential savings at 25th-percentile price: $7.1M (23.1% of that spend)
+Lines excluded as probable unit-of-measure errors: 911
+Units excluded as not comparable: MO, MON, LOT, DOL, JOB, LS, YR, HR, HRS, DAY, WK
+Note: part of the variance is price change over time (inflation) inside the window.
+
+  item                                     unit  buys vend      low   median     high   savings
+  RADIOS, MOBILE, HIGH FREQUENCY, INCLUDI    EA     9    1      $4K      $4K     $10K     $1.8M
+  PARTS AND ACCESSORIES,: GUN, RIFLE, PIS    EA    44    7      $45     $220      $1K     $798K
+  SERVERS, FILE, MICROCOMPUTER               EA    18    2      $2K      $7K     $27K     $528K
+  MANHOLES, PRECAST, TYPE A                  EA    28    1      $6K      $7K     $32K     $512K
+  POWER SOURCE, UNINTERRUPTED                EA    77    1     $138     $646      $3K     $446K
+  TRANSFORMERS, DISTRIBUTION, OIL IMMERSE    EA    21    1      $3K      $5K      $7K     $363K
+  SIGNS, ALUMINUM, TRAFFIC                   EA    85    1       $6      $25     $122     $314K
+  CHLORINE, LIQUID (FOR WATER PURIFICATIO   TON    52    3      $2K      $2K      $2K     $247K
+  STATIONS, DOCKING, MICROCOMPUTER           EA    14    1     $318     $723      $1K     $216K
+  POSTS, SIGN, STEEL                         EA    46    1      $10      $33     $149     $182K
+  THERMOPLASTIC PAVEMENT MARKING MATERIAL   TON    21    2      $1K      $2K      $2K     $152K
+  MAGNESIUM HYDROXIDE                       TON    16    1     $802     $990      $1K     $149K
+
+Capital items (median unit price over $10K): 22 items, $182.8M spend - NOT counted as savings.
+Their price spread mostly reflects different specifications (e.g. a pickup vs a
+specialty truck under one code). Action: standardize specs, then compare bids.
+  TRUCK, PUMPER, CUSTOM CAB, DIE             16 buys  $437K-$2.0M  spend $36.5M
+  Trucks (One Ton and Less Capacity)        229 buys  $27K-$227K  spend $28.6M
+  SUV, Police Patrol                         46 buys  $36K-$100K  spend $27.8M
+  Trucks (Over One Ton Capacity)             84 buys  $62K-$770K  spend $22.8M
+  Ambulances and Rescue Vehicles             18 buys  $344K-$1.6M  spend $20.0M
+
+2. VENDOR FRAGMENTATION (spend split across many vendors)
+----------------------------------------------------------------------
+Categories with 10+ vendors: 61   spend outside their top-3 vendors: $298.8M
+Illustrative consolidation savings (5% of that): $14.9M
+
+  category                                     vendors     spend top-3 share   savings
+  AUTOMOTIVE VEHICLES AND TRANSPORT EQUIP (IN       35   $181.9M         58%     $3.8M
+  ELECTRICAL EQUIPMENT AND SUPPLIES (EXCEPT C       82   $149.4M         59%     $3.1M
+  COMPUTER SOFTWARE FOR MICROCOMPUTERS (PREPR      116    $34.3M         32%     $1.2M
+  WATER SUPPLY, GROUNDWATER, SEWAGE TREATMENT       74    $42.4M         52%     $1.0M
+  FERRIC SULFATE (FESO4)                            30    $43.5M         67%     $707K
+  COMPUTER HARDWARE AND PERIPHERALS FOR MICRO       55    $35.7M         69%     $557K
+  AUTOMOTIVE MAINTENANCE ITEMS AND REPAIR/REP       72    $17.5M         38%     $545K
+  Parking Meters and Area Control Equipment         56    $19.6M         45%     $544K
+  COMPUTER HARDWARE / PERIPHERALS FOR MINI/MA       28    $20.0M         66%     $336K
+  ROAD AND HIGHWAY BUILDING MATERIALS (NOT AS       15    $14.7M         63%     $275K
+
+3. OFF-CONTRACT SPEND (no master agreement, in categories that have contracts)
+----------------------------------------------------------------------
+All spend without a master agreement in the window: $60.0M (5.7%)
+...of which in categories where 50%+ of spend IS on contract: $18.6M across 49 categories
+Illustrative savings if moved onto contract (5%): $930K
+
+  category                                     off-contract   share  lines vendors
+  WATER SUPPLY, GROUNDWATER, SEWAGE TREATMENT         $5.7M     13%    243      56
+  POLICE EQUIPMENT                                    $2.2M     23%    256      54
+  TANKS (ANY COMPOSITION): MOBILE, STATIONARY         $1.3M     34%      2       2
+  Parking Meters and Area Control Equipment           $1.1M      5%    143      38
+  FURNITURE: OFFICE                                   $1.0M     16%     36      15
+  AUTOMOTIVE ACCESSORIES FOR AUTOMOBILES, BUS         $911K     48%     22      12
+  Filters, Air Conditioning/Furnace (Disposab         $591K     35%     59      28
+  FIRE PROTECTION EQUIPMENT AND SUPPLIES              $561K      5%     81      37
+  PLUMBING EQUIPMENT, FIXTURES, AND SUPPLIES          $493K      6%    100      27
+  CHEMICAL LABORATORY EQUIPMENT AND SUPPLIES          $405K     26%    118      17
+
+4. TAIL SPEND (vendors outside the top 80% of spend)
+----------------------------------------------------------------------
+1,352 of 1,450 vendors (93%) share the last 20% of spend ($209.8M) but generate 11,868 of 19,875 purchase orders (60%). Candidates for p-cards, catalogs or consolidation to cut admin cost.
+
+SUMMARY OF POTENTIAL SAVINGS
+----------------------------------------------------------------------
+  Price variance (25th-percentile price):  $7.1M
+  Vendor consolidation (illustrative 5%):  $14.9M
+  Contract compliance (illustrative 5%):   $930K
+  Total (categories can overlap):          $23.0M  over 3 years
