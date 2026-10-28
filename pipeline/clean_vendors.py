@@ -42,9 +42,11 @@ def normalize(name: str) -> str:
     n = str(name).lower()
     n = n.replace("&", " and ")
     n = re.sub(r"\bd/?b/?a\b.*$", " ", n)          # drop "dba ..." trade names
-    n = re.sub(r"\bl\s*l\s*c\b", "llc", n)          # "l l c" -> llc
-    n = re.sub(r"\bl\s*p\b", "lp", n)               # "l p" -> lp
-    n = re.sub(r"[^a-z0-9 ]", " ", n)
+    n = re.sub(r"[^a-z0-9 ]", " ", n)               # punctuation first, so "L.L.C." -> "l l c"
+    n = re.sub(r"\bl\s+l\s+c\b", "llc", n)          # "l l c" -> llc
+    n = re.sub(r"\bl\s+l\s+p\b", "llp", n)          # "l l p" -> llp
+    n = re.sub(r"\bl\s+p\b", "lp", n)               # "l p" -> lp
+    n = re.sub(r"\bi\s+n\s+c\b", "inc", n)          # "i n c" -> inc
     words = [w for w in n.split() if w not in LEGAL_ENDINGS]
     return " ".join(words)
 
